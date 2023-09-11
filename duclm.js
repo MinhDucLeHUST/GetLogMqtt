@@ -36,15 +36,20 @@ async function subscribeToTopicAfterDelay(topic, delayInSeconds) {
     await delayPromise(delayInSeconds * 1000);
 
     // Create an MQTT client
-    const client = mqtt.connect(connectUrl);
+    // const client = mqtt.connect(connectUrl);
 
     // Promisify the 'connect' event
     const connectPromise = new Promise((resolve, reject) => {
+        console.log("check inside connectPromise");
         client.on('connect', () => {
             resolve();
+            client.subscribe(topic);
+            console.log("connectPromise-connect");
+
         });
 
         client.on('error', (err) => {
+            console.log("connectPromise-error");
             reject(err);
         });
     });
@@ -60,7 +65,8 @@ async function subscribeToTopicAfterDelay(topic, delayInSeconds) {
     });
 
     // Subscribe to the specified topic
-    client.subscribe(topic);
+    // console.log("topic: ", topic);
+
 
     // Wait for the MQTT client to connect
     await connectPromise;
@@ -80,4 +86,4 @@ async function subscribeToTopicAfterDelay(topic, delayInSeconds) {
 }
 
 // Call the async function to subscribe to a topic after 10 seconds
-subscribeToTopicAfterDelay('#', 10);
+subscribeToTopicAfterDelay('ConnectivityAssistantInSideZigbeeHandleToCommunicate', 3);

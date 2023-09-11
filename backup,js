@@ -1,0 +1,72 @@
+const mqtt = require("mqtt");
+var config = require("./config.js");
+const fs = require("fs");
+// const test1 = require("./lib1.js")
+/**
+ * Set up prequisites for connection
+ */
+const timestamp = Date.now();
+const dateFormat = new Date(timestamp);
+const LOG_FILE = `./log/logGW_${dateFormat.getHours()}h${dateFormat.getMinutes()}m(${dateFormat.getDate()}thang${dateFormat.getMonth() + 1}).json`;
+
+const HOST = config.Config.GW_ADDRESS;
+const PORT = config.Config.GW_PORT;
+const CLIENT_ID = "ThirdParty";
+
+const connectUrl = `mqtt://${HOST}:${PORT}`;
+const client = mqtt.connect(connectUrl, {
+    clientId: CLIENT_ID,
+    clean: true,
+    connectTimeout: 4000,
+    username: config.Config.USERNAME,
+    password: config.Config.PASSWORD,
+    reconnectPeriod: 1000,
+});
+
+/**
+ * Set up write the ']' to file on SIGINT
+ */
+process.on("SIGINT", () => {
+    fs.appendFileSync(LOG_FILE, "]");
+
+    // Exit the Node.js process gracefully
+    process.exit(0);
+});
+
+/**
+ * Subcribe topic (can add or remove listened topic in ./config.js)
+ */
+const listenedTopics = Object.values(config.Topics);
+client.on("connect", () => {
+    console.log(">> Connected");
+    for (let topic of listenedTopics) {
+        client.subscribe([topic], () => {
+            console.log(`->> Subscribe to topic '${topic}'`);
+        });
+    }
+});
+
+/**
+ * Event handle: write to file (name file format: logGW_<time>.json)
+ */
+var countMessage = 0; // index the message
+fs.appendFile(LOG_FILE, "[", (err) => { });
+client.on("message", (topic, payload) => {
+    var content = `// ${countMessage}. ${topic}:\n${payload},\n\n`;
+    fs.appendFile(LOG_FILE, content, (err) => {
+        if (err) {
+            console.error(err);
+        }
+        countMessage += 1;
+    });
+});
+
+// var MQTTEmitter = require('./mqtt-emitter.js');
+// var events = new MQTTEmitter();
+
+// events.on('gw/+gatewayEui/heartbeat', function (messageParsed, params) {
+//   // console.log('Mess come from onheartbeat');
+//   console.log("Eui: ", params.gatewayEui);
+//   console.log("Jump inside ...");
+//   // DeviceController.onHeartbeat(messageParsed, params.gatewayEui);
+// });
